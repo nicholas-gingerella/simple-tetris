@@ -4,8 +4,8 @@
 #include <unistd.h>
 
 std::wstring tetromino[7];
-int nFieldWidth = 12;
-int nFieldHeight = 18;
+int nFieldWidth = 14;
+int nFieldHeight = 14;
 unsigned char *pField = nullptr;
 
 // func: rotate
@@ -19,7 +19,7 @@ unsigned char *pField = nullptr;
 // rotation calculation is described in video
 // https://www.youtube.com/watch?v=8OK8_tHeCIA
 // at 3:13 - 7:24
-int rotate(int px, int py, int r)
+int Rotate(int px, int py, int r)
 {
     switch (r % 4)
     {
@@ -30,6 +30,43 @@ int rotate(int px, int py, int r)
     }
 
     return 0;
+}
+
+// func: doesPieceFit
+// nTetromino: ID of a tetromino
+// nRotation: current rotation for tetromino piece
+// nPosX: x-coordinate (top left cell of tetromino)
+// nPosY: y-coordinate ((top left cell of tetromino))
+// return: true if piece fits in position, false if it overlaps another piece
+bool DoesPieceFit(int nTetromino, int nRotation, int nPosX, int nPosY)
+{
+    const int pieceWidth = 4;
+    const int pieceHeight = 4;
+    for (int px = 0; px < pieceWidth; px++)
+    {
+        for (int py = 0; py < pieceHeight; py++)
+        {
+            // Get index into piece
+            int pi = Rotate(px, py, nRotation);
+
+            // Get index into field
+            int fi = (nPosY + py) * nFieldWidth + (nPosX + px);
+
+            if (nPosX + px >= 0 && nPosX + px < nFieldWidth)
+            {
+                if (nPosY + py >= 0 && nPosY + py < nFieldHeight)
+                {
+                    if (tetromino[nTetromino][pi] == L'X' && pField[fi] != 0)
+                    {
+                        return false; // fail on first hit
+                    }
+                }
+            }
+
+        }
+    }
+
+    return true;
 }
 
 int main()
@@ -75,23 +112,50 @@ int main()
     {
         for (int y = 0; y < nFieldHeight; y++)
         {
-            pField[(y * nFieldWidth) + x] = (x == 0 || x == (nFieldWidth - 1) || y == nFieldHeight - 1 || x % ((y * nFieldWidth) + x) == 0) ? 9 : 0;
+            pField[(y * nFieldWidth) + x] = (x == 0 || x == (nFieldWidth - 1) || y == nFieldHeight - 1) ? 9 : 0;
         }  
     }
 
-    // init ncurses for drawing characters to the terminal screen
+    // init ncurses for drawing characters to the terminal
     initscr();
-    WINDOW *win = newwin(nFieldWidth, nFieldHeight, 0, 0);
+    WINDOW *win = newwin(nFieldHeight, nFieldWidth, 1, 5);
 
     bool bGameOver = false;
     while (!bGameOver)
     {
+
+        int nCurrentPiece = 0;
+        int nCurrentRotation = 0;
+        int nCurrentX = nFieldWidth / 2;
+        int nCurrentY = 3;
+
+        // GAME TIMING ===========
+
+        // INPUT ===================
+
+        // GAME LOGIC ==========================
+
+        // RENDER OUTPUT ===========================
+
+        // Draw Field
         for (int x = 0; x < nFieldWidth; x++)
         {
             for (int y = 0; y < nFieldHeight; y++)
             {
-                waddch(win, L" ABCDEFG=#"[pField[(y * nFieldWidth) + x]]);
+                mvwaddch(win, y,x, L" ABCDEFG=#"[pField[(y * nFieldWidth) + x]]);
             }  
+        }
+
+        // Draw Current Piece
+        for (int px = 0; px < 4; px++)
+        {
+            for (int py = 0; py < 4; py++)
+            {
+                if (tetromino[nCurrentPiece][Rotate(px, py, nCurrentRotation)] != L'.')
+                {
+                    mvwaddch(win, (nCurrentY + py), nCurrentX + px, nCurrentPiece + 65);
+                }
+            }
         }
 
         wrefresh(win);
