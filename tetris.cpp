@@ -2,6 +2,8 @@
 #include <string>
 #include <ncurses.h>
 #include <unistd.h>
+#include <cstdlib>
+#include <ctime>
 
 std::wstring tetromino[7];
 int nFieldWidth = 14;
@@ -71,6 +73,8 @@ bool DoesPieceFit(int nTetromino, int nRotation, int nPosX, int nPosY)
 
 int main()
 {
+    std::srand(std::time(nullptr));
+
     // Create assets
     tetromino[0].append(L"..X.");
     tetromino[0].append(L"..X.");
@@ -118,22 +122,104 @@ int main()
 
     // init ncurses for drawing characters to the terminal
     initscr();
+    clear();
+    keypad(stdscr, TRUE);
+    nodelay(stdscr, TRUE);
+    noecho();
+    cbreak();
     WINDOW *win = newwin(nFieldHeight, nFieldWidth, 1, 5);
+
+    int nCurrentPiece = 0;
+    int nCurrentRotation = 0;
+    int nCurrentX = nFieldWidth / 2;
+    int nCurrentY = 0;
+
+    int nSpeed = 20;
+    int nSpeedCounter = 0;
+    bool bForceDown = false;
 
     bool bGameOver = false;
     while (!bGameOver)
     {
-
-        int nCurrentPiece = 0;
-        int nCurrentRotation = 0;
-        int nCurrentX = nFieldWidth / 2;
-        int nCurrentY = 3;
-
         // GAME TIMING ===========
+        usleep(50*1000); //50ms
+        nSpeedCounter++;
+        bForceDown = (nSpeedCounter == nSpeed);
 
         // INPUT ===================
+        int ch = getch();
+        switch (ch)
+        {
+            case KEY_LEFT:
+                //move left
+                if (DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX - 1, nCurrentY))
+                {
+                    nCurrentX = nCurrentX - 1;
+                }
+                break;
+            case KEY_RIGHT:
+                //move right
+                if (DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX + 1, nCurrentY))
+                {
+                    nCurrentX = nCurrentX + 1;
+                }
+                break;
+            case KEY_DOWN:
+                if (DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY + 1))
+                {
+                    nCurrentY = nCurrentY + 1;
+                }
+                break;
+            case 'z':
+                //move rotate piece
+                if (DoesPieceFit(nCurrentPiece, nCurrentRotation + 1, nCurrentX, nCurrentY))
+                {
+                    nCurrentRotation++;
+                    Rotate(nCurrentX, nCurrentY, nCurrentRotation);
+                }
+
+                break;
+            case 'x':
+                endwin();
+                exit(0);
+
+        }
 
         // GAME LOGIC ==========================
+        if (bForceDown)
+        {
+            if (DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY + 1))
+            {
+                nCurrentY++;
+            }
+            else
+            {
+                // lock piece into field
+                for (int px = 0; px < 4; px++)
+                {
+                    for (int py = 0; py < 4; py++)
+                    {
+                        if (tetromino[nCurrentPiece][Rotate(px,py,nCurrentRotation)] == L'X')
+                        {
+                            pField[(nCurrentY + py) * nFieldWidth + (nCurrentX + px)] = nCurrentPiece + 1; 
+                        }
+                    }
+                }
+
+                // any horizontal lines?
+
+                // choose next piece
+                nCurrentPiece = std::rand() % 7; //random num 0-6
+                nCurrentRotation = 0;
+                nCurrentX = nFieldWidth / 2;
+                nCurrentY = 0;
+
+                // if piece does not fit, gameover
+                bGameOver = !DoesPieceFit(nCurrentPiece, nCurrentRotation, nCurrentX, nCurrentY);
+            }
+                
+            nSpeedCounter = 0;
+        }
 
         // RENDER OUTPUT ===========================
 
