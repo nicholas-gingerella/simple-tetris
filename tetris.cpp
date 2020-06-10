@@ -7,8 +7,8 @@
 #include <vector>
 
 std::wstring tetromino[7];
-int nFieldWidth = 14;
-int nFieldHeight = 14;
+int nFieldWidth = 16;
+int nFieldHeight = 17;
 unsigned char *pField = nullptr;
 
 // func: rotate
@@ -131,7 +131,7 @@ int main()
     nodelay(stdscr, TRUE);
     noecho();
     cbreak();
-    WINDOW *win = newwin(nFieldHeight, nFieldWidth, 1, 5);
+    WINDOW *win = newwin(nFieldHeight, nFieldWidth + 15, 0, 5);
 
     int nCurrentPiece = 0;
     int nCurrentRotation = 0;
@@ -141,6 +141,10 @@ int main()
     int nSpeed = 20;
     int nSpeedCounter = 0;
     bool bForceDown = false;
+    int nPieceCount = 0;
+
+    int nScore = 0;
+
     std::vector<int> vLines;
 
     bool bGameOver = false;
@@ -210,6 +214,17 @@ int main()
                     }
                 }
 
+                // Increase speed every 10 pieces
+                // speed is #ticks for a move, decreasing
+                // the ticks increases the speed (kinda confusing)
+                if (nPieceCount % 10 == 0)
+                {
+                    if (nSpeed >= 10)
+                    {
+                        nSpeed--;
+                    }
+                }
+
                 // any horizontal lines?
                 for (int py = 0; py < 4; py++)
                 {
@@ -233,9 +248,16 @@ int main()
                     }
                 }
 
+                nScore += 25;
+                if (!vLines.empty())
+                {
+                    // double score for each line completed
+                    // simultaneously ( SCORE BONUS)
+                    nScore += (1 << vLines.size()) * 100;
+                }
+
                 // choose next piece
-                //nCurrentPiece = std::rand() % 7; //random num 0-6
-                nCurrentPiece = 0;
+                nCurrentPiece = std::rand() % 7; //random num 0-6
                 nCurrentRotation = 0;
                 nCurrentX = nFieldWidth / 2;
                 nCurrentY = 0;
@@ -270,6 +292,9 @@ int main()
             }
         }
 
+        // Draw Score
+        mvprintw(0, nFieldWidth + 6, "SCORE: %8d", nScore);
+
         // Remove completed lines
         if (!vLines.empty())
         {
@@ -295,6 +320,8 @@ int main()
 
     // cleanup ncurses window
     endwin();
+
+    std::cout << "Game Over!! Score: " << nScore << std::endl;
 
     return 0;
 }
